@@ -12,7 +12,7 @@ public class Follower : Moveable
             return;
 
         Vector3 direction = _target.position - transform.position;
-        direction.y = 0;
+        direction.y = 0f;
 
         if (direction.magnitude > _catchDistance)
         {
@@ -22,8 +22,8 @@ public class Follower : Moveable
         }
         else
         {
-            _velocity.x = 0;
-            _velocity.z = 0;
+            _velocity.x = 0f;
+            _velocity.z = 0f;
         }
     }
 }

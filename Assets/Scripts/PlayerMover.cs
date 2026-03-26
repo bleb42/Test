@@ -13,14 +13,11 @@ public class PlayerMover : Moveable
 
     protected override void ApplyMovement()
     {
-        Vector3 inputDirection = new Vector3(_moveInput.x, 0, _moveInput.y);
+        Vector3 inputDirection = new Vector3(_moveInput.x, 0f, _moveInput.y);
+        inputDirection = Vector3.ClampMagnitude(inputDirection, 1f);
 
-        if (inputDirection.magnitude > 1)
-            inputDirection.Normalize();
-
-        Vector3 move = transform.TransformDirection(inputDirection);
-
-        _velocity.x = move.x * _speed;
-        _velocity.z = move.z * _speed;
+        Vector3 worldDirection = transform.TransformDirection(inputDirection);
+        _velocity.x = worldDirection.x * _speed;
+        _velocity.z = worldDirection.z * _speed;
     }
 }
