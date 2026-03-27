@@ -22,9 +22,14 @@ public class RigidbodyFollower : MonoBehaviour
     [SerializeField] private float _slopeRayVerticalBias = 0.5f;
     [SerializeField] private float _slopeProjectRayDistance = 0.3f;
 
+    [Header("Step")]
+    [SerializeField] private float _stepOffset = 0.51f;
+    [SerializeField] private float _stepCheckDistance = 0.05f;
+    [SerializeField] private float _stepRayOffset = 0.15f;
+
     private Rigidbody _rigidbody;
     private CapsuleCollider _collider;
-    private bool _isGrounded;
+    private Vector3 _lastMoveDirection;
 
     private void Awake()
     {
@@ -34,17 +39,7 @@ public class RigidbodyFollower : MonoBehaviour
 
     private void FixedUpdate()
     {
-        CheckGround();
         ApplyMovement();
-    }
-
-    private void CheckGround()
-    {
-        float checkDistance = _collider.height * 0.5f + _groundCheckDistance;
-        float sphereRadius = _collider.radius * _groundSphereRadius;
-        Vector3 origin = transform.position + Vector3.up * _groundCheckOffset;
-
-        _isGrounded = Physics.SphereCast(origin, _groundSphereRadius, Vector3.down, out RaycastHit hitInfo, checkDistance, _groundMask);
     }
 
     private void ApplyMovement()
@@ -52,17 +47,19 @@ public class RigidbodyFollower : MonoBehaviour
         if (_target == null)
             return;
 
-        Vector3 target = _target.position - transform.position;
-        target.y = 0f;
+        bool isGrounded = IsGrounded();
 
-        if (target.magnitude <= _catchDistance)
+        Vector3 direction = _target.position - transform.position;
+        direction.y = 0f;
+
+        if (direction.magnitude <= _catchDistance)
         {
             _rigidbody.linearVelocity = new Vector3(0f, _rigidbody.linearVelocity.y, 0f);
 
             return;
         }
 
-        Vector3 direction = target.normalized;
+        direction = direction.normalized;
 
         if (CanWalkOnSlope(direction) == false)
         {
@@ -71,14 +68,24 @@ public class RigidbodyFollower : MonoBehaviour
             return;
         }
 
-        Vector3 moveDirection = _isGrounded ? ProjectOnSlope(direction) : direction;
+        Vector3 moveDirection = isGrounded ? ProjectOnSlope(direction) : direction;
 
-        _rigidbody.linearVelocity = new Vector3(moveDirection.x * _speed, _rigidbody.linearVelocity.y, moveDirection.z * _speed);
+        if(TryClimbStep(moveDirection) == false)
+            _rigidbody.linearVelocity = new Vector3(moveDirection.x * _speed, _rigidbody.linearVelocity.y, moveDirection.z * _speed);
     }
 
-    private bool CanWalkOnSlope(Vector3 direction)
+    private bool IsGrounded()
     {
-        Vector3 rayDirection = direction + Vector3.down * _slopeRayVerticalBias;
+        float checkDistance = _collider.height * 0.5f + _groundCheckDistance;
+        float sphereRadius = _collider.radius * _groundSphereRadius;
+        Vector3 origin = transform.position + Vector3.up * _groundCheckOffset;
+
+        return Physics.SphereCast(origin, sphereRadius, Vector3.down, out RaycastHit hitInfo, checkDistance, _groundMask);
+    }
+
+    private bool CanWalkOnSlope(Vector3 moveDirection)
+    {
+        Vector3 rayDirection = moveDirection + Vector3.down * _slopeRayVerticalBias;
 
         if (Physics.Raycast(transform.position + Vector3.up * _groundCheckOffset, rayDirection, out RaycastHit hit, _slopeRayDistance, _groundMask))
             return Vector3.Angle(hit.normal, Vector3.up) <= _maxSlopeAngle;
@@ -94,5 +101,31 @@ public class RigidbodyFollower : MonoBehaviour
             return Vector3.ProjectOnPlane(moveDirection, hit.normal).normalized;
 
         return moveDirection;
+    }
+
+    private bool TryClimbStep(Vector3 moveDirection)
+    {
+        _lastMoveDirection = moveDirection;
+
+        Vector3 rayPoint = new Vector3(transform.position.x, transform.position.y - _collider.height * 0.5f + _stepRayOffset, transform.position.z);
+
+        bool isBlockedLow = Physics.Raycast(rayPoint, moveDirection, _collider.radius + _stepCheckDistance, _groundMask);
+
+        rayPoint.y += _stepOffset;
+
+        bool isBlockedAbove = Physics.Raycast(rayPoint, moveDirection, _collider.radius + _stepCheckDistance, _groundMask);
+
+        if (isBlockedLow && isBlockedAbove == false)
+        {
+            Physics.Raycast(rayPoint + _lastMoveDirection * (_collider.radius + _stepCheckDistance), Vector3.down, out RaycastHit hitInfo, _stepOffset, _groundMask);
+            Vector3 targetPosition = new Vector3(transform.position.x + moveDirection.x * _speed * Time.fixedDeltaTime, hitInfo.point.y + _collider.height * 0.5f, transform.position.z + moveDirection.z * _speed * Time.fixedDeltaTime);
+
+            _rigidbody.MovePosition(targetPosition);
+            _rigidbody.linearVelocity = Vector3.zero;
+
+            return true;
+        }
+
+        return false;
     }
 }

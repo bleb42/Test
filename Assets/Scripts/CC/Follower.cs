@@ -1,7 +1,6 @@
 using UnityEngine;
 
-[RequireComponent(typeof(CharacterController))]
-public class Follower : Moveable
+public class Follower : Mover
 {
     [SerializeField] private Transform _target;
     [SerializeField] private float _catchDistance = 1f;
@@ -17,13 +16,13 @@ public class Follower : Moveable
         if (direction.magnitude > _catchDistance)
         {
             Vector3 horizontalMotion = direction.normalized * _speed;
-            _velocity.x = horizontalMotion.x;
-            _velocity.z = horizontalMotion.z;
+            Velocity.x = horizontalMotion.x;
+            Velocity.z = horizontalMotion.z;
         }
         else
         {
-            _velocity.x = 0f;
-            _velocity.z = 0f;
+            Velocity.x = 0f;
+            Velocity.z = 0f;
         }
     }
 }

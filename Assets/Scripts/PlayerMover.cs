@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(CharacterController), typeof(PlayerInput))]
-public class PlayerMover : Moveable
+public class PlayerMover : Mover
 {
     private Vector2 _moveInput;
 
@@ -17,7 +17,7 @@ public class PlayerMover : Moveable
         inputDirection = Vector3.ClampMagnitude(inputDirection, 1f);
 
         Vector3 worldDirection = transform.TransformDirection(inputDirection);
-        _velocity.x = worldDirection.x * _speed;
-        _velocity.z = worldDirection.z * _speed;
+        Velocity.x = worldDirection.x * _speed;
+        Velocity.z = worldDirection.z * _speed;
     }
 }
